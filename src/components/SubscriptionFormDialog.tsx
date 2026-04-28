@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCategories, useUpsertSubscription, type SubscriptionInput } from "@/lib/data-hooks";
 import type { Subscription } from "@/lib/subscriptions";
+import { SUBSCRIPTION_PRESETS, type SubscriptionPreset } from "@/lib/subscription-presets";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -49,6 +50,24 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     }
   }, [editing, open, categories]);
 
+  const applyPreset = (preset: SubscriptionPreset) => {
+    if (preset.name === "Outro") {
+      setForm((f) => ({ ...f, name: "" }));
+      return;
+    }
+    const matched = preset.categoryHint
+      ? categories.find((c) => c.name.toLowerCase() === preset.categoryHint.toLowerCase())
+      : undefined;
+    setForm((f) => ({
+      ...f,
+      name: preset.name,
+      amount: preset.amount,
+      currency: preset.currency,
+      billing_cycle: preset.billing_cycle,
+      category_id: matched?.id ?? f.category_id,
+    }));
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Indica um nome"); return; }
@@ -64,15 +83,45 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? "Editar subscrição" : "Nova subscrição"}</DialogTitle>
           <DialogDescription>
-            {editing ? "Atualiza os detalhes da subscrição." : "Adiciona um novo serviço para acompanhar."}
+            {editing ? "Atualiza os detalhes da subscrição." : "Escolhe um serviço popular ou preenche manualmente."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 pt-2">
+          {!editing && (
+            <div className="space-y-2">
+              <Label>Serviços populares</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {SUBSCRIPTION_PRESETS.map((p) => {
+                  const selected = form.name === p.name;
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-base hover:shadow-soft hover:-translate-y-0.5 ${
+                        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-border bg-card"
+                      }`}
+                      title={p.name}
+                    >
+                      <span
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-base"
+                        style={{ backgroundColor: `${p.color}20`, color: p.color }}
+                      >
+                        {p.emoji}
+                      </span>
+                      <span className="text-[10px] font-medium leading-tight line-clamp-1">{p.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="name">Nome do serviço</Label>
             <Input id="name" placeholder="Ex: Netflix" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
