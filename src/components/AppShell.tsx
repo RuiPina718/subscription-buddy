@@ -79,6 +79,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="truncate text-xs text-muted-foreground">Sessão iniciada</p>
               <p className="truncate text-sm font-medium">{user?.email}</p>
             </div>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
+              {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+              {theme === "dark" ? "Modo claro" : "Modo escuro"}
+            </Button>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" /> Terminar sessão
             </Button>
