@@ -19,7 +19,19 @@ interface Props {
 
 export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
   const { data: categories = [] } = useCategories();
+  const { data: subscriptions = [] } = useSubscriptions();
   const upsert = useUpsertSubscription();
+
+  const isDuplicate = (name: string, categoryId: string | null) => {
+    const n = name.trim().toLowerCase();
+    if (!n) return false;
+    return subscriptions.some(
+      (s) =>
+        s.id !== editing?.id &&
+        s.name.trim().toLowerCase() === n &&
+        (s.category_id ?? null) === (categoryId ?? null),
+    );
+  };
 
   const [form, setForm] = useState<SubscriptionInput>({
     name: "",
