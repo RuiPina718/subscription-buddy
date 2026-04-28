@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCategories, useUpsertSubscription, type SubscriptionInput } from "@/lib/data-hooks";
+import { useCategories, useSubscriptions, useUpsertSubscription, type SubscriptionInput } from "@/lib/data-hooks";
 import type { Subscription } from "@/lib/subscriptions";
 import { SUBSCRIPTION_PRESETS, type SubscriptionPreset } from "@/lib/subscription-presets";
 import { toast } from "sonner";
