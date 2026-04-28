@@ -50,6 +50,24 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     }
   }, [editing, open, categories]);
 
+  const applyPreset = (preset: SubscriptionPreset) => {
+    if (preset.name === "Outro") {
+      setForm((f) => ({ ...f, name: "" }));
+      return;
+    }
+    const matched = preset.categoryHint
+      ? categories.find((c) => c.name.toLowerCase() === preset.categoryHint.toLowerCase())
+      : undefined;
+    setForm((f) => ({
+      ...f,
+      name: preset.name,
+      amount: preset.amount,
+      currency: preset.currency,
+      billing_cycle: preset.billing_cycle,
+      category_id: matched?.id ?? f.category_id,
+    }));
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Indica um nome"); return; }
