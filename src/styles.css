@@ -57,7 +57,7 @@
   --radius: 1rem;
 
   /* Friendly blue palette */
-  --background: oklch(0.95 0.02 240);
+  --background: oklch(0.86 0.04 240);
   --foreground: oklch(0.18 0.05 250);
 
   --card: oklch(0.98 0.012 235);
