@@ -1,8 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ListChecks, CalendarDays, Lightbulb, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, ListChecks, CalendarDays, Lightbulb, Settings, LogOut, Menu, X, Moon, Sun } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { signOut, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -54,9 +56,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur md:hidden">
         <Link to="/dashboard"><Logo size="sm" /></Link>
-        <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       <div className="flex">
@@ -72,6 +79,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="truncate text-xs text-muted-foreground">Sessão iniciada</p>
               <p className="truncate text-sm font-medium">{user?.email}</p>
             </div>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
+              {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+              {theme === "dark" ? "Modo claro" : "Modo escuro"}
+            </Button>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" /> Terminar sessão
             </Button>
