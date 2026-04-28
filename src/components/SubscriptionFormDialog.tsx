@@ -70,13 +70,20 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     const matched = preset.categoryHint
       ? categories.find((c) => c.name.toLowerCase() === preset.categoryHint.toLowerCase())
       : undefined;
+    const nextCategoryId = matched?.id ?? form.category_id;
+    if (isDuplicate(preset.name, nextCategoryId)) {
+      toast.error("Subscrição duplicada", {
+        description: `Já tens "${preset.name}" nesta categoria.`,
+      });
+      return;
+    }
     setForm((f) => ({
       ...f,
       name: preset.name,
       amount: preset.amount,
       currency: preset.currency,
       billing_cycle: preset.billing_cycle,
-      category_id: matched?.id ?? f.category_id,
+      category_id: nextCategoryId,
     }));
   };
 
@@ -84,6 +91,12 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Indica um nome"); return; }
     if (form.amount < 0) { toast.error("Valor inválido"); return; }
+    if (isDuplicate(form.name, form.category_id)) {
+      toast.error("Subscrição duplicada", {
+        description: "Já existe uma subscrição com este nome e categoria.",
+      });
+      return;
+    }
     try {
       await upsert.mutateAsync({ id: editing?.id, input: form });
       toast.success(editing ? "Subscrição atualizada" : "Subscrição adicionada");
