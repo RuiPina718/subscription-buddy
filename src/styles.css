@@ -56,55 +56,55 @@
 :root {
   --radius: 1rem;
 
-  /* Friendly warm palette: peach background, coral primary, mint accent */
-  --background: oklch(0.985 0.012 80);
-  --foreground: oklch(0.22 0.04 280);
+  /* Friendly warm palette — darker tones */
+  --background: oklch(0.93 0.018 60);
+  --foreground: oklch(0.16 0.035 280);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.04 280);
+  --card: oklch(0.97 0.012 70);
+  --card-foreground: oklch(0.16 0.035 280);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.04 280);
+  --popover: oklch(0.97 0.012 70);
+  --popover-foreground: oklch(0.16 0.035 280);
 
-  /* Coral / warm pink */
-  --primary: oklch(0.69 0.18 25);
+  /* Deeper coral */
+  --primary: oklch(0.56 0.19 22);
   --primary-foreground: oklch(0.99 0 0);
 
-  /* Soft peach */
-  --secondary: oklch(0.94 0.05 50);
-  --secondary-foreground: oklch(0.32 0.07 30);
+  /* Deeper peach */
+  --secondary: oklch(0.85 0.07 45);
+  --secondary-foreground: oklch(0.22 0.07 30);
 
-  --muted: oklch(0.95 0.015 70);
-  --muted-foreground: oklch(0.5 0.03 270);
+  --muted: oklch(0.88 0.02 65);
+  --muted-foreground: oklch(0.4 0.035 270);
 
-  /* Mint accent */
-  --accent: oklch(0.85 0.13 165);
-  --accent-foreground: oklch(0.25 0.06 170);
+  /* Deeper mint */
+  --accent: oklch(0.7 0.14 165);
+  --accent-foreground: oklch(0.16 0.05 170);
 
-  --destructive: oklch(0.62 0.22 25);
+  --destructive: oklch(0.52 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  --success: oklch(0.72 0.16 155);
-  --success-foreground: oklch(0.18 0.04 160);
+  --success: oklch(0.58 0.16 155);
+  --success-foreground: oklch(0.99 0 0);
 
-  --warning: oklch(0.82 0.16 75);
-  --warning-foreground: oklch(0.25 0.07 60);
+  --warning: oklch(0.68 0.16 70);
+  --warning-foreground: oklch(0.18 0.06 60);
 
-  --border: oklch(0.9 0.02 60);
-  --input: oklch(0.93 0.02 60);
-  --ring: oklch(0.69 0.18 25);
+  --border: oklch(0.78 0.025 55);
+  --input: oklch(0.83 0.025 60);
+  --ring: oklch(0.56 0.19 22);
 
-  --chart-1: oklch(0.69 0.18 25);    /* coral */
-  --chart-2: oklch(0.78 0.14 165);   /* mint */
-  --chart-3: oklch(0.7 0.16 270);    /* lavender */
-  --chart-4: oklch(0.82 0.16 75);    /* honey */
-  --chart-5: oklch(0.65 0.18 320);   /* berry */
+  --chart-1: oklch(0.56 0.19 22);    /* deep coral */
+  --chart-2: oklch(0.62 0.14 165);   /* deep mint */
+  --chart-3: oklch(0.55 0.16 270);   /* deep lavender */
+  --chart-4: oklch(0.68 0.16 70);    /* deep honey */
+  --chart-5: oklch(0.52 0.18 320);   /* deep berry */
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, oklch(0.74 0.18 35) 0%, oklch(0.69 0.18 15) 100%);
-  --gradient-warm: linear-gradient(135deg, oklch(0.92 0.07 60) 0%, oklch(0.94 0.06 25) 100%);
-  --gradient-mint: linear-gradient(135deg, oklch(0.88 0.12 170) 0%, oklch(0.82 0.13 200) 100%);
-  --gradient-hero: linear-gradient(135deg, oklch(0.96 0.05 50) 0%, oklch(0.93 0.07 25) 50%, oklch(0.94 0.08 350) 100%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.6 0.19 35) 0%, oklch(0.5 0.2 12) 100%);
+  --gradient-warm: linear-gradient(135deg, oklch(0.82 0.08 55) 0%, oklch(0.84 0.09 22) 100%);
+  --gradient-mint: linear-gradient(135deg, oklch(0.7 0.13 170) 0%, oklch(0.62 0.14 200) 100%);
+  --gradient-hero: linear-gradient(135deg, oklch(0.86 0.07 50) 0%, oklch(0.82 0.09 22) 50%, oklch(0.83 0.09 350) 100%);
 
   /* Shadows — soft, friendly */
   --shadow-soft: 0 2px 12px -4px oklch(0.5 0.1 30 / 0.12);
