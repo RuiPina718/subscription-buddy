@@ -17,6 +17,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { signOut, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
