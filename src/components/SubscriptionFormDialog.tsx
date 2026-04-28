@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCategories, useUpsertSubscription, type SubscriptionInput } from "@/lib/data-hooks";
+import { useCategories, useSubscriptions, useUpsertSubscription, type SubscriptionInput } from "@/lib/data-hooks";
 import type { Subscription } from "@/lib/subscriptions";
 import { SUBSCRIPTION_PRESETS, type SubscriptionPreset } from "@/lib/subscription-presets";
 import { toast } from "sonner";
@@ -19,7 +19,19 @@ interface Props {
 
 export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
   const { data: categories = [] } = useCategories();
+  const { data: subscriptions = [] } = useSubscriptions();
   const upsert = useUpsertSubscription();
+
+  const isDuplicate = (name: string, categoryId: string | null) => {
+    const n = name.trim().toLowerCase();
+    if (!n) return false;
+    return subscriptions.some(
+      (s) =>
+        s.id !== editing?.id &&
+        s.name.trim().toLowerCase() === n &&
+        (s.category_id ?? null) === (categoryId ?? null),
+    );
+  };
 
   const [form, setForm] = useState<SubscriptionInput>({
     name: "",
@@ -58,13 +70,20 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     const matched = preset.categoryHint
       ? categories.find((c) => c.name.toLowerCase() === preset.categoryHint.toLowerCase())
       : undefined;
+    const nextCategoryId = matched?.id ?? form.category_id;
+    if (isDuplicate(preset.name, nextCategoryId)) {
+      toast.error("Subscrição duplicada", {
+        description: `Já tens "${preset.name}" nesta categoria.`,
+      });
+      return;
+    }
     setForm((f) => ({
       ...f,
       name: preset.name,
       amount: preset.amount,
       currency: preset.currency,
       billing_cycle: preset.billing_cycle,
-      category_id: matched?.id ?? f.category_id,
+      category_id: nextCategoryId,
     }));
   };
 
@@ -72,6 +91,12 @@ export function SubscriptionFormDialog({ open, onOpenChange, editing }: Props) {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Indica um nome"); return; }
     if (form.amount < 0) { toast.error("Valor inválido"); return; }
+    if (isDuplicate(form.name, form.category_id)) {
+      toast.error("Subscrição duplicada", {
+        description: "Já existe uma subscrição com este nome e categoria.",
+      });
+      return;
+    }
     try {
       await upsert.mutateAsync({ id: editing?.id, input: form });
       toast.success(editing ? "Subscrição atualizada" : "Subscrição adicionada");
