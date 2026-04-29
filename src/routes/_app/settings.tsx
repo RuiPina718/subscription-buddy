@@ -23,6 +23,7 @@ function SettingsPage() {
   const [savingName, setSavingName] = useState(false);
 
   const { data: categories = [] } = useCategories();
+  const { data: isAdmin = false } = useIsAdmin();
   const createCat = useCreateCategory();
   const updateColor = useUpdateCategoryColor();
   const [newCat, setNewCat] = useState("");
