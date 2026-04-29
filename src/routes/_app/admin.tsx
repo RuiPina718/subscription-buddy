@@ -59,8 +59,7 @@ function AdminPage() {
       // Look up user id by email via profiles (won't work) — use RPC alternative: signed-in user search not allowed.
       // Instead require lookup via user metadata. We'll search profiles by full_name? No — use auth.users not exposed.
       // Workaround: query a postgres function we'll create later. For now try direct via service-less approach:
-      const { data, error } = await supabase
-        .rpc("get_user_id_by_email", { _email: email });
+      const { data, error } = await (supabase.rpc as any)("get_user_id_by_email", { _email: email });
       if (error) throw error;
       if (!data) throw new Error("Utilizador não encontrado");
       const { error: insErr } = await supabase
