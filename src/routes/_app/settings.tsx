@@ -72,9 +72,16 @@ function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Definições</h1>
-        <p className="mt-1 text-muted-foreground">Gere o teu perfil e categorias.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Definições</h1>
+          <p className="mt-1 text-muted-foreground">Gere o teu perfil e categorias.</p>
+        </div>
+        {isAdmin && (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin"><Shield className="mr-1.5 h-4 w-4" /> Admin</Link>
+          </Button>
+        )}
       </div>
 
       <section className="rounded-3xl bg-card p-6 shadow-card">
