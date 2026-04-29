@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { useCategories, useCreateCategory } from "@/lib/data-hooks";
+import { useCategories, useCreateCategory, useUpdateCategoryColor } from "@/lib/data-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,17 @@ function SettingsPage() {
 
   const { data: categories = [] } = useCategories();
   const createCat = useCreateCategory();
+  const updateColor = useUpdateCategoryColor();
   const [newCat, setNewCat] = useState("");
   const [newColor, setNewColor] = useState("#FF6B9D");
+
+  const handleColorChange = async (id: string, color: string) => {
+    try {
+      await updateColor.mutateAsync({ id, color });
+    } catch (e: any) {
+      toast.error("Erro a atualizar cor", { description: e.message });
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -91,9 +100,17 @@ function SettingsPage() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Predefinidas</p>
           <div className="flex flex-wrap gap-2">
             {defaultCats.map((c) => (
-              <span key={c.id} className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} /> {c.name}
-              </span>
+              <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium transition-base hover:bg-secondary/80">
+                <input
+                  type="color"
+                  value={c.color}
+                  onChange={(e) => handleColorChange(c.id, e.target.value)}
+                  className="h-4 w-4 cursor-pointer rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+                  style={{ backgroundColor: c.color }}
+                  aria-label={`Cor de ${c.name}`}
+                />
+                {c.name}
+              </label>
             ))}
           </div>
         </div>
@@ -103,9 +120,17 @@ function SettingsPage() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Personalizadas</p>
             <div className="flex flex-wrap gap-2">
               {customCats.map((c) => (
-                <span key={c.id} className="inline-flex items-center gap-2 rounded-full bg-accent/40 px-3 py-1.5 text-sm font-medium">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} /> {c.name}
-                </span>
+                <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent/40 px-3 py-1.5 text-sm font-medium transition-base hover:bg-accent/60">
+                  <input
+                    type="color"
+                    value={c.color}
+                    onChange={(e) => handleColorChange(c.id, e.target.value)}
+                    className="h-4 w-4 cursor-pointer rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+                    style={{ backgroundColor: c.color }}
+                    aria-label={`Cor de ${c.name}`}
+                  />
+                  {c.name}
+                </label>
               ))}
             </div>
           </div>
