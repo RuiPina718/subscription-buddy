@@ -93,6 +93,17 @@ export function useToggleSubscriptionStatus() {
   });
 }
 
+export function useUpdateCategoryColor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, color }: { id: string; color: string }) => {
+      const { error } = await supabase.from("categories").update({ color }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["categories"] }),
+  });
+}
+
 export function useCreateCategory() {
   const qc = useQueryClient();
   const { user } = useAuth();
