@@ -21,8 +21,17 @@ function SettingsPage() {
 
   const { data: categories = [] } = useCategories();
   const createCat = useCreateCategory();
+  const updateColor = useUpdateCategoryColor();
   const [newCat, setNewCat] = useState("");
   const [newColor, setNewColor] = useState("#FF6B9D");
+
+  const handleColorChange = async (id: string, color: string) => {
+    try {
+      await updateColor.mutateAsync({ id, color });
+    } catch (e: any) {
+      toast.error("Erro a atualizar cor", { description: e.message });
+    }
+  };
 
   useEffect(() => {
     (async () => {
