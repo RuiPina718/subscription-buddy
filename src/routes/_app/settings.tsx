@@ -3,7 +3,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories, useCreateCategory, useUpdateCategoryColor } from "@/lib/data-hooks";
+import { useIsAdmin } from "@/lib/use-role";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -20,6 +23,7 @@ function SettingsPage() {
   const [savingName, setSavingName] = useState(false);
 
   const { data: categories = [] } = useCategories();
+  const { data: isAdmin = false } = useIsAdmin();
   const createCat = useCreateCategory();
   const updateColor = useUpdateCategoryColor();
   const [newCat, setNewCat] = useState("");
@@ -68,9 +72,16 @@ function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Definições</h1>
-        <p className="mt-1 text-muted-foreground">Gere o teu perfil e categorias.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Definições</h1>
+          <p className="mt-1 text-muted-foreground">Gere o teu perfil e categorias.</p>
+        </div>
+        {isAdmin && (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin"><Shield className="mr-1.5 h-4 w-4" /> Admin</Link>
+          </Button>
+        )}
       </div>
 
       <section className="rounded-3xl bg-card p-6 shadow-card">
