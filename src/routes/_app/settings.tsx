@@ -100,9 +100,17 @@ function SettingsPage() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Predefinidas</p>
           <div className="flex flex-wrap gap-2">
             {defaultCats.map((c) => (
-              <span key={c.id} className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} /> {c.name}
-              </span>
+              <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm font-medium transition-base hover:bg-secondary/80">
+                <input
+                  type="color"
+                  value={c.color}
+                  onChange={(e) => handleColorChange(c.id, e.target.value)}
+                  className="h-4 w-4 cursor-pointer rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+                  style={{ backgroundColor: c.color }}
+                  aria-label={`Cor de ${c.name}`}
+                />
+                {c.name}
+              </label>
             ))}
           </div>
         </div>
@@ -112,9 +120,17 @@ function SettingsPage() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Personalizadas</p>
             <div className="flex flex-wrap gap-2">
               {customCats.map((c) => (
-                <span key={c.id} className="inline-flex items-center gap-2 rounded-full bg-accent/40 px-3 py-1.5 text-sm font-medium">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} /> {c.name}
-                </span>
+                <label key={c.id} className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent/40 px-3 py-1.5 text-sm font-medium transition-base hover:bg-accent/60">
+                  <input
+                    type="color"
+                    value={c.color}
+                    onChange={(e) => handleColorChange(c.id, e.target.value)}
+                    className="h-4 w-4 cursor-pointer rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+                    style={{ backgroundColor: c.color }}
+                    aria-label={`Cor de ${c.name}`}
+                  />
+                  {c.name}
+                </label>
               ))}
             </div>
           </div>
