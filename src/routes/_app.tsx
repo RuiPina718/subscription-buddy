@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
+import { ChatWidget } from "@/components/ChatWidget";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app")({
@@ -27,6 +28,7 @@ function AppLayout() {
   return (
     <AppShell>
       <Outlet />
+      <ChatWidget />
     </AppShell>
   );
 }
