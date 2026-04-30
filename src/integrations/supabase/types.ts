@@ -150,6 +150,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_users: {
+        Args: never
+        Returns: {
+          active_subscription_count: number
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          full_name: string
+          is_admin: boolean
+          last_sign_in_at: string
+          monthly_total: number
+          subscription_count: number
+          user_id: string
+        }[]
+      }
+      admin_remove_user: { Args: { _user_id: string }; Returns: undefined }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
       has_role: {
         Args: {
