@@ -147,7 +147,13 @@ function AdminPage() {
             {admins.map((a) => (
               <li key={a.user_id} className="flex items-center justify-between py-3">
                 <code className="text-xs text-muted-foreground">{a.user_id}</code>
-                <Button variant="ghost" size="icon" onClick={() => removeAdmin(a.user_id)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={a.user_id === user?.id}
+                  title={a.user_id === user?.id ? "Não podes remover-te a ti próprio" : "Remover"}
+                  onClick={() => setConfirmRemove(a)}
+                >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </li>
@@ -155,6 +161,28 @@ function AdminPage() {
           </ul>
         )}
       </section>
+
+      <AlertDialog open={!!confirmRemove} onOpenChange={(v) => !v && setConfirmRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover administrador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vais remover privilégios de administrador a este utilizador. A conta não é eliminada, apenas perde o acesso administrativo. Confirmas?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!confirmRemove) return;
+                await removeAdmin(confirmRemove.user_id);
+                setConfirmRemove(null);
+              }}
+            >Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
