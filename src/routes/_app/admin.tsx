@@ -22,11 +22,13 @@ interface AdminRow {
 
 function AdminPage() {
   const { data: isAdmin, isLoading } = useIsAdmin();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<AdminRow | null>(null);
 
   useEffect(() => {
     if (!isLoading && isAdmin === false) navigate({ to: "/dashboard" });
