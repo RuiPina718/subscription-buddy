@@ -28,6 +28,7 @@ function AppLayout() {
   return (
     <AppShell>
       <Outlet />
+      <ChatWidget />
     </AppShell>
   );
 }
