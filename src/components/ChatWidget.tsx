@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { chatWithAssistant } from "@/server/chat.functions";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
