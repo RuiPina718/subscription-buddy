@@ -157,20 +157,46 @@ async function loadSubs(supabase: any, userId: string): Promise<SubscriptionRow[
   }));
 }
 
+export interface PendingCancellation {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: "monthly" | "yearly";
+  next_billing_date: string;
+  category: string | null;
+}
+
 async function executeTool(
   name: string,
   args: any,
   supabase: any,
   userId: string,
-): Promise<{ result: any; mutated: boolean }> {
-  if (name === "cancel_subscription") {
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({ status: "cancelled" })
-      .eq("id", args.subscription_id)
-      .eq("user_id", userId);
-    if (error) return { result: { ok: false, error: error.message }, mutated: false };
-    return { result: { ok: true, message: "Subscrição cancelada." }, mutated: true };
+  subs: SubscriptionRow[],
+): Promise<{ result: any; mutated: boolean; pending?: PendingCancellation }> {
+  if (name === "propose_cancellation") {
+    const sub = subs.find((s) => s.id === args.subscription_id);
+    if (!sub) return { result: { ok: false, error: "Subscrição não encontrada." }, mutated: false };
+    if (sub.status === "cancelled") return { result: { ok: false, error: "Esta subscrição já está cancelada." }, mutated: false };
+    const pending: PendingCancellation = {
+      id: sub.id,
+      name: sub.name,
+      amount: sub.amount,
+      currency: sub.currency,
+      billing_cycle: sub.billing_cycle,
+      next_billing_date: sub.next_billing_date,
+      category: sub.category,
+    };
+    return {
+      result: {
+        ok: true,
+        awaiting_user_confirmation: true,
+        message: `Proposta de cancelamento apresentada ao utilizador. Aguarda a confirmação dele na UI antes de prosseguir. NÃO voltes a chamar esta ferramenta.`,
+        details: pending,
+      },
+      mutated: false,
+      pending,
+    };
   }
   if (name === "mark_as_used") {
     const today = new Date().toISOString().slice(0, 10);
@@ -183,7 +209,6 @@ async function executeTool(
     return { result: { ok: true, message: `Marcada como usada em ${today}.` }, mutated: true };
   }
   if (name === "suggest_cuts") {
-    const subs = await loadSubs(supabase, userId);
     return { result: suggestCuts(subs), mutated: false };
   }
   return { result: { ok: false, error: `Ferramenta desconhecida: ${name}` }, mutated: false };
