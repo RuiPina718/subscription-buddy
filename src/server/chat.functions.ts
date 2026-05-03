@@ -264,6 +264,7 @@ ${buildContext(subs)}`;
     ];
 
     let mutated = false;
+    let pendingCancellation: PendingCancellation | null = null;
 
     // Allow up to 4 tool-call rounds
     for (let round = 0; round < 4; round++) {
@@ -280,22 +281,22 @@ ${buildContext(subs)}`;
         }),
       });
 
-      if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated };
-      if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated };
+      if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated, pendingCancellation };
+      if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated, pendingCancellation };
       if (!response.ok) {
         const text = await response.text();
         console.error("AI gateway error", response.status, text);
-        return { reply: "", error: "O assistente está temporariamente indisponível.", mutated };
+        return { reply: "", error: "O assistente está temporariamente indisponível.", mutated, pendingCancellation };
       }
 
       const json = await response.json();
       const choice = json.choices?.[0];
       const msg = choice?.message;
-      if (!msg) return { reply: "Sem resposta.", error: null, mutated };
+      if (!msg) return { reply: "Sem resposta.", error: null, mutated, pendingCancellation };
 
       const toolCalls = msg.tool_calls;
       if (!toolCalls || toolCalls.length === 0) {
-        return { reply: msg.content || "", error: null as string | null, mutated };
+        return { reply: msg.content || "", error: null as string | null, mutated, pendingCancellation };
       }
 
       // Append the assistant message with tool calls
@@ -315,8 +316,9 @@ ${buildContext(subs)}`;
         } catch {
           args = {};
         }
-        const { result, mutated: m } = await executeTool(tc.function.name, args, supabase, userId);
+        const { result, mutated: m, pending } = await executeTool(tc.function.name, args, supabase, userId, subs);
         if (m) mutated = true;
+        if (pending) pendingCancellation = pending;
         convo.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -325,5 +327,21 @@ ${buildContext(subs)}`;
       }
     }
 
-    return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated };
+    return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated, pendingCancellation };
+  });
+
+const confirmInputSchema = z.object({ subscription_id: z.string().uuid() });
+
+export const confirmCancellation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => confirmInputSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ status: "cancelled" })
+      .eq("id", data.subscription_id)
+      .eq("user_id", userId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
   });
