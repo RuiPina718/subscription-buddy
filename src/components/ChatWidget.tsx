@@ -16,12 +16,13 @@ interface ChatMessage {
 
 const SUGGESTIONS = [
   "Quanto gasto por mês?",
-  "Quais são as minhas próximas cobranças?",
-  "Em que categoria gasto mais?",
+  "Sugere-me cortes para poupar",
+  "Marca a Netflix como usada hoje",
 ];
 
 export function ChatWidget() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
