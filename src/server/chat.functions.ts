@@ -58,8 +58,8 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "cancel_subscription",
-      description: "Cancela uma subscrição (muda o estado para 'cancelled'). Usa o id exato da subscrição.",
+      name: "propose_cancellation",
+      description: "Propõe o cancelamento de uma subscrição. NÃO cancela imediatamente — devolve os detalhes para o utilizador confirmar num diálogo na UI. Usa SEMPRE esta ferramenta quando o utilizador pedir para cancelar algo.",
       parameters: {
         type: "object",
         properties: {
