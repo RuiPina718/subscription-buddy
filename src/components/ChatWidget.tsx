@@ -45,6 +45,10 @@ export function ChatWidget() {
     setLoading(true);
     try {
       const res = await chat({ data: { messages: next } });
+      if (res.mutated) {
+        qc.invalidateQueries({ queryKey: ["subscriptions"] });
+        toast.success("Subscrições atualizadas");
+      }
       if (res.error) {
         setMessages([...next, { role: "assistant", content: `⚠️ ${res.error}` }]);
       } else {
