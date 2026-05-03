@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { chatWithAssistant } from "@/server/chat.functions";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -14,12 +16,13 @@ interface ChatMessage {
 
 const SUGGESTIONS = [
   "Quanto gasto por mês?",
-  "Quais são as minhas próximas cobranças?",
-  "Em que categoria gasto mais?",
+  "Sugere-me cortes para poupar",
+  "Marca a Netflix como usada hoje",
 ];
 
 export function ChatWidget() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -42,6 +45,10 @@ export function ChatWidget() {
     setLoading(true);
     try {
       const res = await chat({ data: { messages: next } });
+      if (res.mutated) {
+        qc.invalidateQueries({ queryKey: ["subscriptions"] });
+        toast.success("Subscrições atualizadas");
+      }
       if (res.error) {
         setMessages([...next, { role: "assistant", content: `⚠️ ${res.error}` }]);
       } else {
