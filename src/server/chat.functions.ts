@@ -58,8 +58,8 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "cancel_subscription",
-      description: "Cancela uma subscrição (muda o estado para 'cancelled'). Usa o id exato da subscrição.",
+      name: "propose_cancellation",
+      description: "Propõe o cancelamento de uma subscrição. NÃO cancela imediatamente — devolve os detalhes para o utilizador confirmar num diálogo na UI. Usa SEMPRE esta ferramenta quando o utilizador pedir para cancelar algo.",
       parameters: {
         type: "object",
         properties: {
@@ -157,20 +157,46 @@ async function loadSubs(supabase: any, userId: string): Promise<SubscriptionRow[
   }));
 }
 
+export interface PendingCancellation {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: "monthly" | "yearly";
+  next_billing_date: string;
+  category: string | null;
+}
+
 async function executeTool(
   name: string,
   args: any,
   supabase: any,
   userId: string,
-): Promise<{ result: any; mutated: boolean }> {
-  if (name === "cancel_subscription") {
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({ status: "cancelled" })
-      .eq("id", args.subscription_id)
-      .eq("user_id", userId);
-    if (error) return { result: { ok: false, error: error.message }, mutated: false };
-    return { result: { ok: true, message: "Subscrição cancelada." }, mutated: true };
+  subs: SubscriptionRow[],
+): Promise<{ result: any; mutated: boolean; pending?: PendingCancellation }> {
+  if (name === "propose_cancellation") {
+    const sub = subs.find((s) => s.id === args.subscription_id);
+    if (!sub) return { result: { ok: false, error: "Subscrição não encontrada." }, mutated: false };
+    if (sub.status === "cancelled") return { result: { ok: false, error: "Esta subscrição já está cancelada." }, mutated: false };
+    const pending: PendingCancellation = {
+      id: sub.id,
+      name: sub.name,
+      amount: sub.amount,
+      currency: sub.currency,
+      billing_cycle: sub.billing_cycle,
+      next_billing_date: sub.next_billing_date,
+      category: sub.category,
+    };
+    return {
+      result: {
+        ok: true,
+        awaiting_user_confirmation: true,
+        message: `Proposta de cancelamento apresentada ao utilizador. Aguarda a confirmação dele na UI antes de prosseguir. NÃO voltes a chamar esta ferramenta.`,
+        details: pending,
+      },
+      mutated: false,
+      pending,
+    };
   }
   if (name === "mark_as_used") {
     const today = new Date().toISOString().slice(0, 10);
@@ -183,7 +209,6 @@ async function executeTool(
     return { result: { ok: true, message: `Marcada como usada em ${today}.` }, mutated: true };
   }
   if (name === "suggest_cuts") {
-    const subs = await loadSubs(supabase, userId);
     return { result: suggestCuts(subs), mutated: false };
   }
   return { result: { ok: false, error: `Ferramenta desconhecida: ${name}` }, mutated: false };
@@ -206,13 +231,14 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
     const todayISO = new Date().toISOString().slice(0, 10);
     const systemPrompt = `És o assistente do Trackify, uma app de gestão de subscrições. Respondes sempre em português de Portugal, de forma clara, direta e amigável. Usa markdown leve quando ajudar.
 
-Tens acesso a ferramentas reais para AGIR sobre os dados do utilizador:
-- cancel_subscription(subscription_id): cancela uma subscrição
+Tens acesso a ferramentas para AGIR sobre os dados do utilizador:
+- propose_cancellation(subscription_id): propõe cancelar uma subscrição. NÃO cancela imediatamente — abre um diálogo na UI onde o utilizador confirma passo-a-passo. Usa SEMPRE esta ferramenta quando o utilizador pedir para cancelar (mesmo que diga "cancela já").
 - mark_as_used(subscription_id): marca como usada hoje
 - suggest_cuts(): devolve análise com sugestões de cortes
 
 REGRAS IMPORTANTES:
-- Antes de cancelar algo, CONFIRMA com o utilizador (a menos que ele diga claramente "cancela X").
+- NUNCA prometas que cancelaste algo. Após chamar propose_cancellation, diz que abriste o diálogo de confirmação e que basta o utilizador clicar em "Confirmar cancelamento".
+- Se a ferramenta devolver awaiting_user_confirmation, NÃO voltes a chamá-la para a mesma subscrição na mesma resposta.
 - Usa SEMPRE o id (UUID) exato da lista de subscrições abaixo ao chamar ferramentas.
 - Para perguntas só de leitura (totais, próximas cobranças), responde diretamente sem chamar ferramentas.
 - Apresenta valores em euros (€). Hoje é ${todayISO}.
@@ -238,6 +264,7 @@ ${buildContext(subs)}`;
     ];
 
     let mutated = false;
+    let pendingCancellation: PendingCancellation | null = null;
 
     // Allow up to 4 tool-call rounds
     for (let round = 0; round < 4; round++) {
@@ -254,22 +281,22 @@ ${buildContext(subs)}`;
         }),
       });
 
-      if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated };
-      if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated };
+      if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated, pendingCancellation };
+      if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated, pendingCancellation };
       if (!response.ok) {
         const text = await response.text();
         console.error("AI gateway error", response.status, text);
-        return { reply: "", error: "O assistente está temporariamente indisponível.", mutated };
+        return { reply: "", error: "O assistente está temporariamente indisponível.", mutated, pendingCancellation };
       }
 
       const json = await response.json();
       const choice = json.choices?.[0];
       const msg = choice?.message;
-      if (!msg) return { reply: "Sem resposta.", error: null, mutated };
+      if (!msg) return { reply: "Sem resposta.", error: null, mutated, pendingCancellation };
 
       const toolCalls = msg.tool_calls;
       if (!toolCalls || toolCalls.length === 0) {
-        return { reply: msg.content || "", error: null as string | null, mutated };
+        return { reply: msg.content || "", error: null as string | null, mutated, pendingCancellation };
       }
 
       // Append the assistant message with tool calls
@@ -289,8 +316,9 @@ ${buildContext(subs)}`;
         } catch {
           args = {};
         }
-        const { result, mutated: m } = await executeTool(tc.function.name, args, supabase, userId);
+        const { result, mutated: m, pending } = await executeTool(tc.function.name, args, supabase, userId, subs);
         if (m) mutated = true;
+        if (pending) pendingCancellation = pending;
         convo.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -299,5 +327,21 @@ ${buildContext(subs)}`;
       }
     }
 
-    return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated };
+    return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated, pendingCancellation };
+  });
+
+const confirmInputSchema = z.object({ subscription_id: z.string().uuid() });
+
+export const confirmCancellation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => confirmInputSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ status: "cancelled" })
+      .eq("id", data.subscription_id)
+      .eq("user_id", userId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
   });
