@@ -218,18 +218,19 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => chatInputSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
-
-    let subs: SubscriptionRow[];
     try {
-      subs = await loadSubs(supabase, userId);
-    } catch (e) {
-      console.error("chat: failed to load subscriptions", e);
-      return { reply: "", error: "Não consegui carregar as tuas subscrições.", mutated: false };
-    }
+      const { supabase, userId } = context as { supabase: any; userId: string };
 
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const systemPrompt = `És o assistente do Trackify, uma app de gestão de subscrições. Respondes sempre em português de Portugal, de forma clara, direta e amigável. Usa markdown leve quando ajudar.
+      let subs: SubscriptionRow[];
+      try {
+        subs = await loadSubs(supabase, userId);
+      } catch (e) {
+        console.error("chat: failed to load subscriptions", e);
+        return { reply: "", error: "Não consegui carregar as tuas subscrições.", mutated: false, pendingCancellation: null };
+      }
+
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const systemPrompt = `És o assistente do Trackify, uma app de gestão de subscrições. Respondes sempre em português de Portugal, de forma clara, direta e amigável. Usa markdown leve quando ajudar.
 
 Tens acesso a ferramentas para AGIR sobre os dados do utilizador:
 - propose_cancellation(subscription_id): propõe cancelar uma subscrição. NÃO cancela imediatamente — abre um diálogo na UI onde o utilizador confirma passo-a-passo. Usa SEMPRE esta ferramenta quando o utilizador pedir para cancelar (mesmo que diga "cancela já").
@@ -246,88 +247,89 @@ REGRAS IMPORTANTES:
 Dados atuais do utilizador:
 ${buildContext(subs)}`;
 
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) {
-      return { reply: "", error: "Serviço de IA não configurado.", mutated: false };
-    }
-
-    // Conversation messages for the AI loop
-    const convo: any[] = [
-      { role: "system", content: systemPrompt },
-      ...data.messages.map((m) => {
-        const msg: any = { role: m.role, content: m.content };
-        if (m.tool_call_id) msg.tool_call_id = m.tool_call_id;
-        if (m.name) msg.name = m.name;
-        if (m.tool_calls) msg.tool_calls = m.tool_calls;
-        return msg;
-      }),
-    ];
-
-    let mutated = false;
-    let pendingCancellation: PendingCancellation | null = null;
-
-    // Allow up to 4 tool-call rounds
-    for (let round = 0; round < 4; round++) {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: convo,
-          tools: TOOLS,
-        }),
-      });
-
-      if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated, pendingCancellation };
-      if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated, pendingCancellation };
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("AI gateway error", response.status, text);
-        return { reply: "", error: `O assistente está indisponível (${response.status}).`, mutated, pendingCancellation };
+      const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+      if (!LOVABLE_API_KEY) {
+        return { reply: "", error: "Serviço de IA não configurado.", mutated: false, pendingCancellation: null };
       }
 
-      const json = await response.json();
-      const choice = json.choices?.[0];
-      const msg = choice?.message;
-      if (!msg) return { reply: "Sem resposta.", error: null, mutated, pendingCancellation };
+      // Conversation messages for the AI loop. Only forward user/assistant text messages
+      // from the client — internal tool messages are recreated server-side each turn.
+      const convo: any[] = [
+        { role: "system", content: systemPrompt },
+        ...data.messages
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((m) => ({ role: m.role, content: m.content })),
+      ];
 
-      const toolCalls = msg.tool_calls;
-      if (!toolCalls || toolCalls.length === 0) {
-        return { reply: msg.content || "", error: null as string | null, mutated, pendingCancellation };
-      }
+      let mutated = false;
+      let pendingCancellation: PendingCancellation | null = null;
 
-      // Append the assistant message with tool calls
-      convo.push({
-        role: "assistant",
-        content: msg.content ?? "",
-        tool_calls: toolCalls,
-      });
-
-      // Execute each tool and append a tool message with the result
-      for (const tc of toolCalls) {
-        let args: any = {};
-        try {
-          args = typeof tc.function.arguments === "string"
-            ? JSON.parse(tc.function.arguments || "{}")
-            : (tc.function.arguments ?? {});
-        } catch {
-          args = {};
-        }
-        const { result, mutated: m, pending } = await executeTool(tc.function.name, args, supabase, userId, subs);
-        if (m) mutated = true;
-        if (pending) pendingCancellation = pending;
-        convo.push({
-          role: "tool",
-          tool_call_id: tc.id,
-          content: JSON.stringify(result),
+      // Allow up to 4 tool-call rounds
+      for (let round = 0; round < 4; round++) {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: convo,
+            tools: TOOLS,
+          }),
         });
-      }
-    }
 
-    return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated, pendingCancellation };
+        if (response.status === 429) return { reply: "", error: "Demasiados pedidos. Tenta novamente daqui a uns segundos.", mutated, pendingCancellation };
+        if (response.status === 402) return { reply: "", error: "Créditos de IA esgotados.", mutated, pendingCancellation };
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          console.error("AI gateway error", response.status, text);
+          return { reply: "", error: `O assistente está indisponível (${response.status}).`, mutated, pendingCancellation };
+        }
+
+        const json = await response.json();
+        const choice = json.choices?.[0];
+        const msg = choice?.message;
+        if (!msg) return { reply: "Sem resposta.", error: null, mutated, pendingCancellation };
+
+        const toolCalls = msg.tool_calls;
+        if (!toolCalls || toolCalls.length === 0) {
+          return { reply: msg.content || "", error: null as string | null, mutated, pendingCancellation };
+        }
+
+        // Append the assistant message with tool calls
+        convo.push({
+          role: "assistant",
+          content: msg.content ?? "",
+          tool_calls: toolCalls,
+        });
+
+        // Execute each tool and append a tool message with the result
+        for (const tc of toolCalls) {
+          let args: any = {};
+          try {
+            args = typeof tc.function.arguments === "string"
+              ? JSON.parse(tc.function.arguments || "{}")
+              : (tc.function.arguments ?? {});
+          } catch {
+            args = {};
+          }
+          const { result, mutated: m, pending } = await executeTool(tc.function.name, args, supabase, userId, subs);
+          if (m) mutated = true;
+          if (pending) pendingCancellation = pending;
+          convo.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify(result),
+          });
+        }
+      }
+
+      return { reply: "Não consegui concluir a operação após várias tentativas.", error: null, mutated, pendingCancellation };
+    } catch (e: any) {
+      console.error("chatWithAssistant unhandled", e?.message, e?.stack);
+      return { reply: "", error: `Erro interno: ${e?.message ?? "desconhecido"}`, mutated: false, pendingCancellation: null };
+    }
   });
 
 const confirmInputSchema = z.object({ subscription_id: z.string().uuid() });
