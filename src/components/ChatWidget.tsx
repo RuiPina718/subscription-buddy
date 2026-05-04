@@ -83,7 +83,15 @@ export function ChatWidget() {
       if (res.error) {
         setMessages([...next, { role: "assistant", content: `⚠️ ${res.error}` }]);
       } else {
-        setMessages([...next, { role: "assistant", content: res.reply || "Sem resposta." }]);
+        setMessages([
+          ...next,
+          {
+            role: "assistant",
+            content:
+              res.reply?.trim() ||
+              "Não consegui gerar uma resposta completa desta vez. Tenta reformular o pedido.",
+          },
+        ]);
       }
     } catch (e: any) {
       setMessages([...next, { role: "assistant", content: `⚠️ ${e?.message ?? "Erro inesperado."}` }]);
