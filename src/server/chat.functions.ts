@@ -275,7 +275,7 @@ ${buildContext(subs)}`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: convo,
           tools: TOOLS,
         }),
@@ -286,7 +286,7 @@ ${buildContext(subs)}`;
       if (!response.ok) {
         const text = await response.text();
         console.error("AI gateway error", response.status, text);
-        return { reply: "", error: "O assistente está temporariamente indisponível.", mutated, pendingCancellation };
+        return { reply: "", error: `O assistente está indisponível (${response.status}).`, mutated, pendingCancellation };
       }
 
       const json = await response.json();
