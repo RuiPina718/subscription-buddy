@@ -42,10 +42,7 @@ export const adminResendConfirmation = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ userId: z.string().uuid(), email: z.string().email() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "signup",
-      email: data.email,
-    });
+    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email);
     if (error) throw new Error(error.message);
     await logAction(context.supabase, "confirmation_resent", data.userId, data.email);
     return { ok: true };
