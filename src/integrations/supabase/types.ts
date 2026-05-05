@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          target_email: string | null
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_email?: string | null
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_email?: string | null
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -150,10 +183,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_user_subscriptions: {
+        Args: { _user_id: string }
+        Returns: {
+          amount: number
+          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
+          category_color: string
+          category_name: string
+          created_at: string
+          currency: string
+          id: string
+          last_used_at: string
+          name: string
+          next_billing_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+        }[]
+      }
+      admin_global_stats: { Args: never; Returns: Json }
       admin_list_users: {
         Args: never
         Returns: {
           active_subscription_count: number
+          banned_until: string
           created_at: string
           email: string
           email_confirmed_at: string
@@ -164,6 +215,15 @@ export type Database = {
           subscription_count: number
           user_id: string
         }[]
+      }
+      admin_log_action: {
+        Args: {
+          _action: string
+          _metadata?: Json
+          _target_email?: string
+          _target_id?: string
+        }
+        Returns: undefined
       }
       admin_remove_user: { Args: { _user_id: string }; Returns: undefined }
       get_user_id_by_email: { Args: { _email: string }; Returns: string }
