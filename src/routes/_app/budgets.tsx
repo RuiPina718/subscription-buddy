@@ -6,7 +6,6 @@ import { monthlyEquivalent, formatCurrency } from "@/lib/subscriptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Loader2, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,7 +133,9 @@ function BudgetRow({
 
       {limit > 0 && (
         <div className="mt-3">
-          <Progress value={pct} indicatorClassName={barColor} />
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+            <div className={`h-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+          </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
             {over ? (
               <span className="font-semibold text-destructive">Acima do orçamento em {formatCurrency(spend - limit)}</span>
