@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ListChecks, CalendarDays, Lightbulb, Settings, LogOut, Menu, X, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, ListChecks, CalendarDays, Lightbulb, Wallet, Settings, LogOut, Menu, X, Moon, Sun } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/subscriptions", label: "Subscrições", icon: ListChecks },
   { to: "/calendar", label: "Calendário", icon: CalendarDays },
+  { to: "/budgets", label: "Orçamentos", icon: Wallet },
   { to: "/insights", label: "Insights", icon: Lightbulb },
   { to: "/settings", label: "Definições", icon: Settings },
 ] as const;

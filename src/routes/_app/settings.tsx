@@ -2,15 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { useCategories, useCreateCategory, useUpdateCategoryColor } from "@/lib/data-hooks";
+import { useCategories, useCreateCategory, useUpdateCategoryColor, useSubscriptions } from "@/lib/data-hooks";
 import { useIsAdmin } from "@/lib/use-role";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { Shield } from "lucide-react";
+import { Shield, Download, FileJson } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
+import { exportSubscriptionsCsv, exportFullJson, downloadFile } from "@/lib/import-export";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -23,11 +24,23 @@ function SettingsPage() {
   const [savingName, setSavingName] = useState(false);
 
   const { data: categories = [] } = useCategories();
+  const { data: subs = [] } = useSubscriptions();
   const { data: isAdmin = false } = useIsAdmin();
   const createCat = useCreateCategory();
   const updateColor = useUpdateCategoryColor();
   const [newCat, setNewCat] = useState("");
   const [newColor, setNewColor] = useState("#FF6B9D");
+
+  const handleExportCsv = () => {
+    const csv = exportSubscriptionsCsv(subs, categories);
+    downloadFile(csv, `trackify-subscriptions-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
+    toast.success("CSV exportado");
+  };
+  const handleExportJson = () => {
+    const json = exportFullJson(subs, categories);
+    downloadFile(json, `trackify-export-${new Date().toISOString().slice(0, 10)}.json`, "application/json");
+    toast.success("JSON exportado");
+  };
 
   const handleColorChange = async (id: string, color: string) => {
     try {
@@ -162,6 +175,19 @@ function SettingsPage() {
             Adicionar
           </Button>
         </form>
+      </section>
+
+      <section className="rounded-3xl bg-card p-6 shadow-card">
+        <h2 className="text-lg font-bold">Exportar dados</h2>
+        <p className="text-sm text-muted-foreground">Descarrega todas as tuas subscrições. RGPD-friendly.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleExportCsv} disabled={subs.length === 0}>
+            <Download className="mr-1.5 h-4 w-4" /> Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportJson} disabled={subs.length === 0}>
+            <FileJson className="mr-1.5 h-4 w-4" /> Exportar tudo (JSON)
+          </Button>
+        </div>
       </section>
     </div>
   );
