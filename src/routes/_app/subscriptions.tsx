@@ -196,6 +196,7 @@ function SubsPage() {
       )}
 
       <SubscriptionFormDialog open={open} onOpenChange={setOpen} editing={editing} />
+      <ImportCsvDialog open={importOpen} onOpenChange={setImportOpen} />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
