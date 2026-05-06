@@ -176,6 +176,19 @@ function SettingsPage() {
           </Button>
         </form>
       </section>
+
+      <section className="rounded-3xl bg-card p-6 shadow-card">
+        <h2 className="text-lg font-bold">Exportar dados</h2>
+        <p className="text-sm text-muted-foreground">Descarrega todas as tuas subscrições. RGPD-friendly.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleExportCsv} disabled={subs.length === 0}>
+            <Download className="mr-1.5 h-4 w-4" /> Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportJson} disabled={subs.length === 0}>
+            <FileJson className="mr-1.5 h-4 w-4" /> Exportar tudo (JSON)
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

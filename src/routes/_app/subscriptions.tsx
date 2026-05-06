@@ -4,8 +4,9 @@ import { useSubscriptions, useCategories, useDeleteSubscription, useToggleSubscr
 import { formatCurrency, daysUntil } from "@/lib/subscriptions";
 import type { Subscription } from "@/lib/subscriptions";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Filter, Upload } from "lucide-react";
 import { SubscriptionFormDialog } from "@/components/SubscriptionFormDialog";
+import { ImportCsvDialog } from "@/components/ImportCsvDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +27,7 @@ function SubsPage() {
   const toggle = useToggleSubscriptionStatus();
 
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Subscription | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Subscription | null>(null);
   const [search, setSearch] = useState("");
@@ -46,9 +48,14 @@ function SubsPage() {
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Subscrições</h1>
           <p className="mt-1 text-muted-foreground">Gere todas as tuas subscrições.</p>
         </div>
-        <Button onClick={() => { setEditing(null); setOpen(true); }} className="bg-gradient-primary text-primary-foreground shadow-glow">
-          <Plus className="mr-1.5 h-4 w-4" /> Nova
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-1.5 h-4 w-4" /> Importar
+          </Button>
+          <Button onClick={() => { setEditing(null); setOpen(true); }} className="bg-gradient-primary text-primary-foreground shadow-glow">
+            <Plus className="mr-1.5 h-4 w-4" /> Nova
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
