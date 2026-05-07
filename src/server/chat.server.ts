@@ -389,6 +389,13 @@ function toolFallbackReply(toolName: string, result: any, pending?: PendingCance
     }
     return lines.join("\n");
   }
+  if (toolName === "create_subscription" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "update_subscription_amount" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "set_budget" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "compare_months" && result) {
+    return `Atualmente gastas **€${result.current_monthly}/mês** em ${result.active_count} subscrições ativas. Já cancelaste ${result.cancelled_count} (poupança de €${result.saved_per_month}/mês).`;
+  }
+  if (result?.error) return `Não consegui completar: ${result.error}`;
   return "Já tratei do pedido. Se quiseres, posso ajudar com outra subscrição.";
 }
 
