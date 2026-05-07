@@ -153,10 +153,9 @@ export function ChatWidget() {
       if (res.ok) {
         toast.success(`${pending.name} cancelada`);
         qc.invalidateQueries({ queryKey: ["subscriptions"] });
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: `✅ Cancelei a subscrição **${pending.name}**.` },
-        ]);
+        const msg = `✅ Cancelei a subscrição **${pending.name}**.`;
+        setMessages((m) => [...m, { role: "assistant", content: msg }]);
+        if (conversationId) appendMessage(conversationId, user.id, "assistant", msg).catch(console.error);
         setPending(null);
         setConfirmStep(1);
       } else {
