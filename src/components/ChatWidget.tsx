@@ -205,13 +205,25 @@ export function ChatWidget() {
                 <p className="text-xs opacity-90 leading-tight">Pergunta sobre as tuas subscrições</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Fechar"
-              className="rounded-full p-1.5 transition-base hover:bg-white/20"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleClearHistory}
+                  aria-label="Limpar histórico"
+                  className="rounded-full p-1.5 transition-base hover:bg-white/20"
+                  title="Limpar histórico"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Fechar"
+                className="rounded-full p-1.5 transition-base hover:bg-white/20"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
