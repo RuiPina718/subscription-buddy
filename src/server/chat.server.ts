@@ -78,6 +78,66 @@ const TOOLS = [
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_subscription",
+      description: "Cria uma nova subscrição para o utilizador. Confirma o nome, valor e ciclo antes de chamar.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          amount: { type: "number" },
+          currency: { type: "string", description: "Código ISO, default EUR" },
+          billing_cycle: { type: "string", enum: ["monthly", "yearly"] },
+          billing_day: { type: "number", description: "Dia do mês (1-28) em que é cobrada" },
+          category: { type: "string", description: "Nome da categoria existente (opcional)" },
+        },
+        required: ["name", "amount", "billing_cycle", "billing_day"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_subscription_amount",
+      description: "Atualiza o valor (preço) de uma subscrição existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          subscription_id: { type: "string" },
+          amount: { type: "number" },
+        },
+        required: ["subscription_id", "amount"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "compare_months",
+      description: "Compara o gasto mensal atual com a média histórica e devolve diferença.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_budget",
+      description: "Define ou atualiza um orçamento mensal para uma categoria.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "Nome da categoria" },
+          monthly_limit: { type: "number" },
+        },
+        required: ["category", "monthly_limit"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 function buildContext(subs: SubscriptionRow[]): string {
@@ -211,6 +271,86 @@ async function executeTool(
   if (name === "suggest_cuts") {
     return { result: suggestCuts(subs), mutated: false };
   }
+  if (name === "create_subscription") {
+    const { name: subName, amount, currency, billing_cycle, billing_day, category } = args;
+    if (!subName || typeof amount !== "number" || !billing_cycle || !billing_day) {
+      return { result: { ok: false, error: "Faltam campos obrigatórios." }, mutated: false };
+    }
+    let category_id: string | null = null;
+    if (category) {
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("id")
+        .or(`user_id.eq.${userId},is_default.eq.true`)
+        .ilike("name", category)
+        .maybeSingle();
+      category_id = cat?.id ?? null;
+    }
+    const today = new Date();
+    const day = Math.min(Math.max(1, Number(billing_day)), 28);
+    const next = new Date(today.getFullYear(), today.getMonth(), day);
+    if (next <= today) next.setMonth(next.getMonth() + 1);
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .insert({
+        user_id: userId,
+        name: subName,
+        amount,
+        currency: currency || "EUR",
+        billing_cycle,
+        billing_day: day,
+        next_billing_date: next.toISOString().slice(0, 10),
+        category_id,
+        status: "active",
+      })
+      .select("id")
+      .single();
+    if (error) return { result: { ok: false, error: error.message }, mutated: false };
+    return { result: { ok: true, id: data.id, message: `Subscrição "${subName}" criada.` }, mutated: true };
+  }
+  if (name === "update_subscription_amount") {
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ amount: args.amount })
+      .eq("id", args.subscription_id)
+      .eq("user_id", userId);
+    if (error) return { result: { ok: false, error: error.message }, mutated: false };
+    return { result: { ok: true, message: `Valor atualizado para €${args.amount}.` }, mutated: true };
+  }
+  if (name === "compare_months") {
+    const active = subs.filter((s) => s.status === "active");
+    const currentMonthly = active.reduce((sum, s) => sum + (s.billing_cycle === "yearly" ? s.amount / 12 : s.amount), 0);
+    const allMonthly = subs.reduce((sum, s) => sum + (s.billing_cycle === "yearly" ? s.amount / 12 : s.amount), 0);
+    const cancelled = subs.filter((s) => s.status === "cancelled");
+    const savedMonthly = cancelled.reduce((sum, s) => sum + (s.billing_cycle === "yearly" ? s.amount / 12 : s.amount), 0);
+    return {
+      result: {
+        current_monthly: Number(currentMonthly.toFixed(2)),
+        with_cancelled_monthly: Number(allMonthly.toFixed(2)),
+        saved_per_month: Number(savedMonthly.toFixed(2)),
+        active_count: active.length,
+        cancelled_count: cancelled.length,
+      },
+      mutated: false,
+    };
+  }
+  if (name === "set_budget") {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .or(`user_id.eq.${userId},is_default.eq.true`)
+      .ilike("name", args.category)
+      .maybeSingle();
+    if (!cat) return { result: { ok: false, error: `Categoria "${args.category}" não encontrada.` }, mutated: false };
+    const { error } = await supabase
+      .from("category_budgets")
+      .upsert(
+        { user_id: userId, category_id: cat.id, monthly_limit: args.monthly_limit },
+        { onConflict: "user_id,category_id" },
+      );
+    if (error) return { result: { ok: false, error: error.message }, mutated: false };
+    return { result: { ok: true, message: `Orçamento de ${args.category} definido em €${args.monthly_limit}/mês.` }, mutated: true };
+  }
   return { result: { ok: false, error: `Ferramenta desconhecida: ${name}` }, mutated: false };
 }
 
@@ -249,6 +389,13 @@ function toolFallbackReply(toolName: string, result: any, pending?: PendingCance
     }
     return lines.join("\n");
   }
+  if (toolName === "create_subscription" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "update_subscription_amount" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "set_budget" && result?.ok) return `✅ ${result.message}`;
+  if (toolName === "compare_months" && result) {
+    return `Atualmente gastas **€${result.current_monthly}/mês** em ${result.active_count} subscrições ativas. Já cancelaste ${result.cancelled_count} (poupança de €${result.saved_per_month}/mês).`;
+  }
+  if (result?.error) return `Não consegui completar: ${result.error}`;
   return "Já tratei do pedido. Se quiseres, posso ajudar com outra subscrição.";
 }
 
@@ -292,6 +439,10 @@ Tens acesso a ferramentas para AGIR sobre os dados do utilizador:
 - propose_cancellation(subscription_id): propõe cancelar uma subscrição. NÃO cancela imediatamente — abre um diálogo na UI onde o utilizador confirma passo-a-passo. Usa SEMPRE esta ferramenta quando o utilizador pedir para cancelar.
 - mark_as_used(subscription_id): marca como usada hoje.
 - suggest_cuts(): devolve análise com sugestões de cortes.
+- create_subscription(name, amount, billing_cycle, billing_day, currency?, category?): cria uma nova subscrição. Confirma os dados antes.
+- update_subscription_amount(subscription_id, amount): atualiza o preço.
+- compare_months(): compara gasto atual vs canceladas (poupança).
+- set_budget(category, monthly_limit): define orçamento mensal por categoria.
 
 REGRAS IMPORTANTES:
 - NUNCA prometas que cancelaste algo. Após chamar propose_cancellation, diz que abriste o diálogo de confirmação.

@@ -7,6 +7,12 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { chatWithAssistant, confirmCancellation } from "@/server/chat.functions";
 import { useAuth } from "@/lib/auth";
+import {
+  loadOrCreateConversation,
+  loadMessages,
+  appendMessage,
+  clearConversation,
+} from "@/lib/chat-history";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -18,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Bot, Send, X, Loader2, Sparkles, AlertTriangle } from "lucide-react";
+import { Bot, Send, X, Loader2, Sparkles, AlertTriangle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/subscriptions";
 
@@ -53,6 +59,7 @@ export function ChatWidget() {
   const [pending, setPending] = useState<PendingCancellation | null>(null);
   const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
   const [confirming, setConfirming] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const chat = useServerFn(chatWithAssistant);
   const confirmFn = useServerFn(confirmCancellation);
@@ -60,6 +67,23 @@ export function ChatWidget() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // Load history when first opened
+  useEffect(() => {
+    if (!open || !user || conversationId) return;
+    (async () => {
+      try {
+        const cid = await loadOrCreateConversation(user.id);
+        setConversationId(cid);
+        const stored = await loadMessages(cid);
+        if (stored.length > 0) {
+          setMessages(stored.map((m) => ({ role: m.role, content: m.content })));
+        }
+      } catch (e) {
+        console.error("Failed to load chat history", e);
+      }
+    })();
+  }, [open, user, conversationId]);
 
   if (!user) return null;
 
@@ -70,33 +94,54 @@ export function ChatWidget() {
     setMessages(next);
     setInput("");
     setLoading(true);
+
+    let cid = conversationId;
+    if (!cid) {
+      try {
+        cid = await loadOrCreateConversation(user.id);
+        setConversationId(cid);
+      } catch (e) {
+        console.error("conversation create failed", e);
+      }
+    }
+    if (cid) appendMessage(cid, user.id, "user", trimmed).catch(console.error);
+
     try {
-      const res = await chat({ data: { messages: next } });
+      const res = await chat({ data: { messages: next.slice(-20) } });
       if (res.mutated) {
         qc.invalidateQueries({ queryKey: ["subscriptions"] });
-        toast.success("Subscrições atualizadas");
+        qc.invalidateQueries({ queryKey: ["budgets"] });
+        toast.success("Atualizações aplicadas");
       }
       if (res.pendingCancellation) {
         setPending(res.pendingCancellation);
         setConfirmStep(1);
       }
-      if (res.error) {
-        setMessages([...next, { role: "assistant", content: `⚠️ ${res.error}` }]);
-      } else {
-        setMessages([
-          ...next,
-          {
-            role: "assistant",
-            content:
-              res.reply?.trim() ||
-              "Não consegui gerar uma resposta completa desta vez. Tenta reformular o pedido.",
-          },
-        ]);
-      }
+      const replyContent = res.error
+        ? `⚠️ ${res.error}`
+        : res.reply?.trim() || "Não consegui gerar uma resposta completa desta vez. Tenta reformular o pedido.";
+      setMessages([...next, { role: "assistant", content: replyContent }]);
+      if (cid) appendMessage(cid, user.id, "assistant", replyContent).catch(console.error);
     } catch (e: any) {
-      setMessages([...next, { role: "assistant", content: `⚠️ ${e?.message ?? "Erro inesperado."}` }]);
+      const err = `⚠️ ${e?.message ?? "Erro inesperado."}`;
+      setMessages([...next, { role: "assistant", content: err }]);
+      if (cid) appendMessage(cid, user.id, "assistant", err).catch(console.error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
+    try {
+      await clearConversation(conversationId);
+      setMessages([]);
+      toast.success("Histórico limpo");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Não foi possível limpar");
     }
   };
 
@@ -108,10 +153,9 @@ export function ChatWidget() {
       if (res.ok) {
         toast.success(`${pending.name} cancelada`);
         qc.invalidateQueries({ queryKey: ["subscriptions"] });
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: `✅ Cancelei a subscrição **${pending.name}**.` },
-        ]);
+        const msg = `✅ Cancelei a subscrição **${pending.name}**.`;
+        setMessages((m) => [...m, { role: "assistant", content: msg }]);
+        if (conversationId) appendMessage(conversationId, user.id, "assistant", msg).catch(console.error);
         setPending(null);
         setConfirmStep(1);
       } else {
@@ -160,13 +204,25 @@ export function ChatWidget() {
                 <p className="text-xs opacity-90 leading-tight">Pergunta sobre as tuas subscrições</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Fechar"
-              className="rounded-full p-1.5 transition-base hover:bg-white/20"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleClearHistory}
+                  aria-label="Limpar histórico"
+                  className="rounded-full p-1.5 transition-base hover:bg-white/20"
+                  title="Limpar histórico"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Fechar"
+                className="rounded-full p-1.5 transition-base hover:bg-white/20"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
