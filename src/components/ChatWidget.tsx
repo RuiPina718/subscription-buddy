@@ -107,7 +107,7 @@ export function ChatWidget() {
     if (cid) appendMessage(cid, user.id, "user", trimmed).catch(console.error);
 
     try {
-      const res = await chat({ data: { messages: next } });
+      const res = await chat({ data: { messages: next.slice(-20) } });
       if (res.mutated) {
         qc.invalidateQueries({ queryKey: ["subscriptions"] });
         qc.invalidateQueries({ queryKey: ["budgets"] });
