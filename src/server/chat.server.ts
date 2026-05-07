@@ -78,6 +78,66 @@ const TOOLS = [
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_subscription",
+      description: "Cria uma nova subscrição para o utilizador. Confirma o nome, valor e ciclo antes de chamar.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          amount: { type: "number" },
+          currency: { type: "string", description: "Código ISO, default EUR" },
+          billing_cycle: { type: "string", enum: ["monthly", "yearly"] },
+          billing_day: { type: "number", description: "Dia do mês (1-28) em que é cobrada" },
+          category: { type: "string", description: "Nome da categoria existente (opcional)" },
+        },
+        required: ["name", "amount", "billing_cycle", "billing_day"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_subscription_amount",
+      description: "Atualiza o valor (preço) de uma subscrição existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          subscription_id: { type: "string" },
+          amount: { type: "number" },
+        },
+        required: ["subscription_id", "amount"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "compare_months",
+      description: "Compara o gasto mensal atual com a média histórica e devolve diferença.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_budget",
+      description: "Define ou atualiza um orçamento mensal para uma categoria.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type: "string", description: "Nome da categoria" },
+          monthly_limit: { type: "number" },
+        },
+        required: ["category", "monthly_limit"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 function buildContext(subs: SubscriptionRow[]): string {
