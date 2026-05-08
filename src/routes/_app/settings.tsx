@@ -199,6 +199,167 @@ function SettingsPage() {
           </Button>
         </div>
       </section>
+
+      <GoogleCalendarSection />
     </div>
+  );
+}
+
+function GoogleCalendarSection() {
+  const qc = useQueryClient();
+  const statusFn = useServerFn(getGoogleCalendarStatus);
+  const authUrlFn = useServerFn(getGoogleAuthUrl);
+  const disconnectFn = useServerFn(disconnectGoogleCalendar);
+  const syncFn = useServerFn(syncGoogleCalendar);
+  const updateSettingsFn = useServerFn(updateGoogleCalendarSettings);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["gcal-status"],
+    queryFn: () => statusFn({}),
+  });
+
+  const [reminderDays, setReminderDays] = useState(2);
+  const [syncRenewals, setSyncRenewals] = useState(true);
+  const [syncReminders, setSyncReminders] = useState(true);
+  const [syncMonthly, setSyncMonthly] = useState(true);
+
+  useEffect(() => {
+    if (data?.settings) {
+      setReminderDays(data.settings.reminder_days_before);
+      setSyncRenewals(data.settings.sync_renewals);
+      setSyncReminders(data.settings.sync_reminders);
+      setSyncMonthly(data.settings.sync_monthly_summary);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gcal = params.get("gcal");
+    if (gcal === "connected") {
+      toast.success("Google Calendar ligado!");
+      qc.invalidateQueries({ queryKey: ["gcal-status"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (gcal === "error") {
+      toast.error("Erro a ligar Google Calendar", { description: params.get("reason") ?? "" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [qc]);
+
+  const connect = useMutation({
+    mutationFn: () => authUrlFn({}),
+    onSuccess: ({ url }) => { window.location.href = url; },
+    onError: (e: any) => toast.error("Erro", { description: e.message }),
+  });
+
+  const disconnect = useMutation({
+    mutationFn: () => disconnectFn({}),
+    onSuccess: () => {
+      toast.success("Google Calendar desligado");
+      qc.invalidateQueries({ queryKey: ["gcal-status"] });
+    },
+    onError: (e: any) => toast.error("Erro", { description: e.message }),
+  });
+
+  const sync = useMutation({
+    mutationFn: () => syncFn({}),
+    onSuccess: (r: any) => toast.success(`Sincronizado: ${r.created} eventos criados`),
+    onError: (e: any) => toast.error("Erro a sincronizar", { description: e.message }),
+  });
+
+  const saveSettings = useMutation({
+    mutationFn: () => updateSettingsFn({
+      data: {
+        reminder_days_before: reminderDays,
+        sync_renewals: syncRenewals,
+        sync_reminders: syncReminders,
+        sync_monthly_summary: syncMonthly,
+      },
+    }),
+    onSuccess: () => {
+      toast.success("Definições guardadas");
+      qc.invalidateQueries({ queryKey: ["gcal-status"] });
+    },
+    onError: (e: any) => toast.error("Erro", { description: e.message }),
+  });
+
+  return (
+    <section className="rounded-3xl bg-card p-6 shadow-card">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" /> Google Calendar
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Sincroniza renovações, lembretes e resumo mensal no teu calendário.
+          </p>
+        </div>
+        {data?.connected && (
+          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-600">
+            Ligado
+          </span>
+        )}
+      </div>
+
+      {isLoading ? (
+        <Loader2 className="mt-4 h-4 w-4 animate-spin" />
+      ) : !data?.connected ? (
+        <Button
+          className="mt-4 bg-gradient-primary text-primary-foreground shadow-glow"
+          onClick={() => connect.mutate()}
+          disabled={connect.isPending}
+        >
+          {connect.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Ligar Google Calendar
+        </Button>
+      ) : (
+        <div className="mt-5 space-y-4">
+          <div className="space-y-3 rounded-2xl bg-muted/40 p-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sr">Renovação de cada subscrição</Label>
+              <Switch id="sr" checked={syncRenewals} onCheckedChange={setSyncRenewals} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="srm">Lembrete antes de renovar</Label>
+              <Switch id="srm" checked={syncReminders} onCheckedChange={setSyncReminders} />
+            </div>
+            {syncReminders && (
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="rd" className="text-sm text-muted-foreground">Dias antes</Label>
+                <Input
+                  id="rd"
+                  type="number"
+                  min={0}
+                  max={14}
+                  value={reminderDays}
+                  onChange={(e) => setReminderDays(Number(e.target.value))}
+                  className="w-20"
+                />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sm">Resumo mensal (dia 1, 9h)</Label>
+              <Switch id="sm" checked={syncMonthly} onCheckedChange={setSyncMonthly} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}>
+              {saveSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar definições
+            </Button>
+            <Button variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
+              {sync.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
+              Sincronizar agora
+            </Button>
+            <Button variant="ghost" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
+              <Unlink className="mr-1.5 h-4 w-4" /> Desligar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            "Sincronizar agora" remove os eventos antigos criados pelo Trackify e cria-os de novo conforme as tuas subscrições ativas.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
