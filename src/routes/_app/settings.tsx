@@ -6,12 +6,22 @@ import { useCategories, useCreateCategory, useUpdateCategoryColor, useSubscripti
 import { useIsAdmin } from "@/lib/use-role";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { Shield, Download, FileJson } from "lucide-react";
+import { Shield, Download, FileJson, Calendar as CalendarIcon, RefreshCw, Unlink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
 import { exportSubscriptionsCsv, exportFullJson, downloadFile } from "@/lib/import-export";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getGoogleCalendarStatus,
+  getGoogleAuthUrl,
+  disconnectGoogleCalendar,
+  syncGoogleCalendar,
+  updateGoogleCalendarSettings,
+} from "@/lib/google-calendar.functions";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
