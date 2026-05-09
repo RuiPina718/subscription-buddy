@@ -40,8 +40,8 @@ export const Route = createRootRoute({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Trackify — Gere as tuas subscrições num único lugar" },
       { name: "twitter:description", content: "Controla todas as tuas subscrições, evita cobranças surpresa e poupa todos os meses com o Trackify." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8c6f00d5-0522-491c-be4a-afa147e50e99/id-preview-6c63ae2c--577c05c9-4ca6-4bb9-aad3-f24347f1231d.lovable.app-1777325329992.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8c6f00d5-0522-491c-be4a-afa147e50e99/id-preview-6c63ae2c--577c05c9-4ca6-4bb9-aad3-f24347f1231d.lovable.app-1777325329992.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ebd7c0e4-a630-4f53-9afd-91a5d9a66eb6" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ebd7c0e4-a630-4f53-9afd-91a5d9a66eb6" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
